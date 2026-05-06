@@ -22,10 +22,9 @@ The app has no backend. PDF files, passwords, previews, and extracted attachment
 
 ## Deploying to GitHub Pages
 
-1. Push this repository to GitHub.
-2. Open repository settings.
-3. In **Pages**, deploy from the `main` branch root.
-4. Keep the repository URL and Pages URL in `index.html` and this README aligned with the final repository name.
+The repository includes a GitHub Actions workflow that uploads the static files from `main` to GitHub Pages without a build step.
+
+If Pages is not already enabled, open repository settings and set **Pages** to deploy with **GitHub Actions**.
 
 ## Local Development
 
