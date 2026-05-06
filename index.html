@@ -151,12 +151,54 @@
         </section>
 
         <section class="panel preview-panel" aria-labelledby="preview-title">
-          <div class="panel-heading">
+          <div class="panel-heading preview-heading">
             <div>
-              <p class="eyebrow" data-i18n="previewEyebrow">First page</p>
+              <p class="eyebrow" data-i18n="previewEyebrow">Document</p>
               <h2 id="preview-title" data-i18n="previewTitle">Preview</h2>
             </div>
-            <span id="page-count" class="meta-pill">-</span>
+            <div class="preview-toolbar" aria-label="PDF page controls" data-i18n-aria-label="pageControls">
+              <button
+                id="prev-page"
+                class="icon-button toolbar-button"
+                type="button"
+                disabled
+                aria-label="Previous page"
+                data-i18n-aria-label="previousPage"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m15 18-6-6 6-6"></path>
+                </svg>
+              </button>
+              <span id="page-indicator" class="meta-pill">-</span>
+              <button
+                id="next-page"
+                class="icon-button toolbar-button"
+                type="button"
+                disabled
+                aria-label="Next page"
+                data-i18n-aria-label="nextPage"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </button>
+              <button
+                id="maximize-preview"
+                class="button button-light preview-maximize"
+                type="button"
+                disabled
+                aria-label="Maximize document"
+                data-i18n-aria-label="maximizePreview"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+                  <path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
+                  <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+                  <path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
+                </svg>
+                <span data-i18n="maximizeButton">Maximize</span>
+              </button>
+            </div>
           </div>
 
           <div id="preview-frame" class="preview-frame">
@@ -208,6 +250,67 @@
           </div>
         </section>
       </main>
+    </div>
+
+    <div
+      id="document-viewer"
+      class="viewer-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="viewer-title"
+      hidden
+    >
+      <div class="viewer-shell">
+        <div class="viewer-navbar">
+          <div class="viewer-title-block">
+            <p class="eyebrow" data-i18n="viewerEyebrow">Unlocked document</p>
+            <h2 id="viewer-title" data-i18n="viewerTitle">PDF preview</h2>
+          </div>
+          <div class="viewer-controls" aria-label="PDF page controls" data-i18n-aria-label="pageControls">
+            <button
+              id="viewer-prev-page"
+              class="icon-button viewer-nav-button"
+              type="button"
+              disabled
+              aria-label="Previous page"
+              data-i18n-aria-label="previousPage"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"></path>
+              </svg>
+            </button>
+            <span id="viewer-page-indicator" class="viewer-page-indicator">-</span>
+            <button
+              id="viewer-next-page"
+              class="icon-button viewer-nav-button"
+              type="button"
+              disabled
+              aria-label="Next page"
+              data-i18n-aria-label="nextPage"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </button>
+          </div>
+          <button
+            id="close-viewer"
+            class="button button-light"
+            type="button"
+            aria-label="Close preview"
+            data-i18n-aria-label="closePreview"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+            <span data-i18n="closePreview">Close</span>
+          </button>
+        </div>
+        <div id="viewer-frame" class="viewer-frame">
+          <canvas id="pdf-viewer" aria-label="Maximized PDF preview"></canvas>
+        </div>
+      </div>
     </div>
 
     <noscript>

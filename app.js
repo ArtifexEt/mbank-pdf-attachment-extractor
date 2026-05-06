@@ -35,9 +35,18 @@ const I18N = {
     hidePassword: "Hide password",
     extractButton: "Unlock PDF",
     unlockingButton: "Unlocking...",
-    previewEyebrow: "First page",
+    previewEyebrow: "Document",
     previewTitle: "Preview",
     previewEmpty: "Preview appears after unlock.",
+    pageControls: "PDF page controls",
+    previousPage: "Previous page",
+    nextPage: "Next page",
+    pageIndicator: "Page {page} of {total}",
+    maximizeButton: "Maximize",
+    maximizePreview: "Maximize document",
+    viewerEyebrow: "Unlocked document",
+    viewerTitle: "PDF preview",
+    closePreview: "Close",
     attachmentsEyebrow: "Embedded files",
     attachmentsTitle: "Attachments",
     downloadAll: "Download all",
@@ -60,8 +69,6 @@ const I18N = {
     readError: "Could not read this PDF.",
     noAttachmentsLoaded: "No attachments loaded yet.",
     noEmbeddedAttachments: "No embedded attachments found.",
-    pageSingular: "page",
-    pagePlural: "pages",
   },
   pl: {
     metaTitle: "mBank PDF Attachment Extractor",
@@ -85,9 +92,18 @@ const I18N = {
     hidePassword: "Ukryj hasło",
     extractButton: "Odblokuj PDF-a",
     unlockingButton: "Odblokowywanie...",
-    previewEyebrow: "Pierwsza strona",
+    previewEyebrow: "Dokument",
     previewTitle: "Podgląd",
     previewEmpty: "Podgląd pojawi się po odblokowaniu.",
+    pageControls: "Sterowanie stronami PDF-a",
+    previousPage: "Poprzednia strona",
+    nextPage: "Następna strona",
+    pageIndicator: "Strona {page} z {total}",
+    maximizeButton: "Powiększ",
+    maximizePreview: "Powiększ dokument",
+    viewerEyebrow: "Odblokowany dokument",
+    viewerTitle: "Podgląd PDF",
+    closePreview: "Zamknij",
     attachmentsEyebrow: "Pliki osadzone",
     attachmentsTitle: "Załączniki",
     downloadAll: "Pobierz wszystkie",
@@ -110,8 +126,6 @@ const I18N = {
     readError: "Nie udało się odczytać tego PDF-a.",
     noAttachmentsLoaded: "Nie wczytano jeszcze załączników.",
     noEmbeddedAttachments: "Nie znaleziono osadzonych załączników.",
-    pageSingular: "strona",
-    pagePlural: "stron",
   },
 };
 
@@ -126,10 +140,20 @@ const elements = {
   togglePassword: document.querySelector("#toggle-password"),
   extractButton: document.querySelector("#extract-button"),
   status: document.querySelector("#status-message"),
-  pageCount: document.querySelector("#page-count"),
+  pageIndicator: document.querySelector("#page-indicator"),
+  prevPage: document.querySelector("#prev-page"),
+  nextPage: document.querySelector("#next-page"),
+  maximizePreview: document.querySelector("#maximize-preview"),
   previewFrame: document.querySelector("#preview-frame"),
   previewCanvas: document.querySelector("#pdf-preview"),
   previewEmpty: document.querySelector("#preview-empty"),
+  viewerOverlay: document.querySelector("#document-viewer"),
+  viewerFrame: document.querySelector("#viewer-frame"),
+  viewerCanvas: document.querySelector("#pdf-viewer"),
+  viewerPageIndicator: document.querySelector("#viewer-page-indicator"),
+  viewerPrevPage: document.querySelector("#viewer-prev-page"),
+  viewerNextPage: document.querySelector("#viewer-next-page"),
+  closeViewer: document.querySelector("#close-viewer"),
   attachmentsBody: document.querySelector("#attachments-body"),
   downloadAll: document.querySelector("#download-all"),
   metaDescription: document.querySelector("#meta-description"),
@@ -144,6 +168,8 @@ const state = {
   fileBuffer: null,
   pdf: null,
   attachments: [],
+  currentPage: 1,
+  viewerOpen: false,
   renderToken: 0,
   busy: false,
   lang: "en",
@@ -248,7 +274,7 @@ function setLanguage(lang, persist) {
   updateLanguageButtons();
   updateTogglePasswordLabel();
   renderStatus();
-  renderPageCount();
+  updatePreviewControls();
   renderExtractButton();
 
   elements.fileName.textContent = state.file ? state.file.name : t("noneSelected");
@@ -286,29 +312,24 @@ function setStatusByKey(key, variant = "neutral", vars = {}) {
   renderStatus();
 }
 
-function pageWord(count) {
-  if (state.lang === "pl") {
-    const lastDigit = count % 10;
-    const lastTwoDigits = count % 100;
-    if (count === 1) {
-      return "strona";
-    }
-    if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
-      return "strony";
-    }
-    return "stron";
-  }
+function updatePreviewControls() {
+  const totalPages = state.pdf?.numPages ?? 0;
+  const hasPdf = totalPages > 0;
+  const pageLabel = hasPdf
+    ? t("pageIndicator", { page: state.currentPage, total: totalPages })
+    : "-";
 
-  return count === 1 ? t("pageSingular") : t("pagePlural");
-}
+  elements.pageIndicator.textContent = pageLabel;
+  elements.viewerPageIndicator.textContent = pageLabel;
 
-function renderPageCount() {
-  if (!state.pdf) {
-    elements.pageCount.textContent = "-";
-    return;
-  }
+  const canGoPrevious = hasPdf && state.currentPage > 1 && !state.busy;
+  const canGoNext = hasPdf && state.currentPage < totalPages && !state.busy;
 
-  elements.pageCount.textContent = `${state.pdf.numPages} ${pageWord(state.pdf.numPages)}`;
+  elements.prevPage.disabled = !canGoPrevious;
+  elements.viewerPrevPage.disabled = !canGoPrevious;
+  elements.nextPage.disabled = !canGoNext;
+  elements.viewerNextPage.disabled = !canGoNext;
+  elements.maximizePreview.disabled = !hasPdf || state.busy;
 }
 
 function renderExtractButton() {
@@ -361,14 +382,19 @@ function setBusy(isBusy) {
   elements.togglePassword.disabled = isBusy || !state.file;
   elements.downloadAll.disabled = isBusy || state.attachments.length === 0;
   renderExtractButton();
+  updatePreviewControls();
 }
 
 function resetPreview() {
-  const context = elements.previewCanvas.getContext("2d");
-  context.clearRect(0, 0, elements.previewCanvas.width, elements.previewCanvas.height);
+  clearCanvas(elements.previewCanvas);
+  clearCanvas(elements.viewerCanvas);
+  closeDocumentViewer();
+  state.currentPage = 1;
   elements.previewCanvas.removeAttribute("style");
+  elements.viewerCanvas.removeAttribute("style");
   elements.previewFrame.classList.remove("has-preview");
-  elements.pageCount.textContent = "-";
+  elements.viewerFrame.classList.remove("has-preview");
+  updatePreviewControls();
 }
 
 function renderEmptyAttachments(key = "noAttachmentsLoaded") {
@@ -525,37 +551,123 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-async function renderPreview(pdf) {
-  const token = (state.renderToken += 1);
-  const page = await pdf.getPage(1);
+function clearCanvas(canvas) {
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+}
 
-  if (token !== state.renderToken) {
-    return;
+function clampPage(pageNumber) {
+  if (!state.pdf) {
+    return 1;
   }
 
+  return Math.min(Math.max(pageNumber, 1), state.pdf.numPages);
+}
+
+async function renderPageToCanvas(pdf, pageNumber, canvas, frame, mode) {
+  const page = await pdf.getPage(pageNumber);
   const baseViewport = page.getViewport({ scale: 1 });
-  const framePadding = 34;
-  const availableWidth = Math.max(elements.previewFrame.clientWidth - framePadding, 240);
-  const scale = Math.min(1.75, Math.max(0.4, availableWidth / baseViewport.width));
+  const framePadding = mode === "viewer" ? 56 : 34;
+  const availableWidth = Math.max(frame.clientWidth - framePadding, 240);
+  const availableHeight = Math.max(frame.clientHeight - framePadding, 320);
+  const fitToWidth = availableWidth / baseViewport.width;
+  const fitToFrame = Math.min(fitToWidth, availableHeight / baseViewport.height);
+  const scale =
+    mode === "viewer"
+      ? Math.min(2.5, Math.max(0.45, fitToFrame))
+      : Math.min(1.75, Math.max(0.4, fitToWidth));
   const viewport = page.getViewport({ scale });
   const outputScale = window.devicePixelRatio || 1;
-  const canvas = elements.previewCanvas;
   const context = canvas.getContext("2d", { alpha: false });
 
   canvas.width = Math.floor(viewport.width * outputScale);
   canvas.height = Math.floor(viewport.height * outputScale);
   canvas.style.width = `${Math.floor(viewport.width)}px`;
   canvas.style.height = `${Math.floor(viewport.height)}px`;
+  canvas.setAttribute("aria-label", t("pageIndicator", { page: pageNumber, total: pdf.numPages }));
 
   context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
   context.fillStyle = "#fff";
   context.fillRect(0, 0, viewport.width, viewport.height);
 
   await page.render({ canvasContext: context, viewport }).promise;
+}
 
-  if (token === state.renderToken) {
-    elements.previewFrame.classList.add("has-preview");
+async function renderCurrentPage() {
+  if (!state.pdf) {
+    resetPreview();
+    return;
   }
+
+  const token = (state.renderToken += 1);
+  const pageNumber = state.currentPage;
+  updatePreviewControls();
+
+  await renderPageToCanvas(
+    state.pdf,
+    pageNumber,
+    elements.previewCanvas,
+    elements.previewFrame,
+    "preview",
+  );
+
+  if (token !== state.renderToken) {
+    return;
+  }
+
+  elements.previewFrame.classList.add("has-preview");
+
+  if (!state.viewerOpen) {
+    return;
+  }
+
+  await renderPageToCanvas(
+    state.pdf,
+    pageNumber,
+    elements.viewerCanvas,
+    elements.viewerFrame,
+    "viewer",
+  );
+
+  if (token !== state.renderToken) {
+    return;
+  }
+
+  elements.viewerFrame.classList.add("has-preview");
+}
+
+function setCurrentPage(pageNumber) {
+  if (!state.pdf) {
+    return;
+  }
+
+  const nextPage = clampPage(pageNumber);
+  if (nextPage === state.currentPage) {
+    updatePreviewControls();
+    return;
+  }
+
+  state.currentPage = nextPage;
+  renderCurrentPage();
+}
+
+function openDocumentViewer() {
+  if (!state.pdf) {
+    return;
+  }
+
+  state.viewerOpen = true;
+  elements.viewerOverlay.hidden = false;
+  document.body.classList.add("viewer-open");
+  updatePreviewControls();
+  renderCurrentPage();
+  elements.closeViewer.focus();
+}
+
+function closeDocumentViewer() {
+  state.viewerOpen = false;
+  elements.viewerOverlay.hidden = true;
+  document.body.classList.remove("viewer-open");
 }
 
 async function extractAttachments() {
@@ -571,12 +683,13 @@ async function extractAttachments() {
     await destroyCurrentPdf();
     const pdf = await loadPdfDocument();
     state.pdf = pdf;
-    renderPageCount();
+    state.currentPage = 1;
+    updatePreviewControls();
 
     const attachmentsMap = await pdf.getAttachments();
     state.attachments = normalizeAttachments(attachmentsMap);
     renderAttachments();
-    await renderPreview(pdf);
+    await renderCurrentPage();
 
     const count = state.attachments.length;
     setStatusByKey(
@@ -663,6 +776,38 @@ function attachEvents() {
     updateTogglePasswordLabel();
   });
 
+  elements.prevPage.addEventListener("click", () => setCurrentPage(state.currentPage - 1));
+  elements.nextPage.addEventListener("click", () => setCurrentPage(state.currentPage + 1));
+  elements.viewerPrevPage.addEventListener("click", () => setCurrentPage(state.currentPage - 1));
+  elements.viewerNextPage.addEventListener("click", () => setCurrentPage(state.currentPage + 1));
+  elements.maximizePreview.addEventListener("click", openDocumentViewer);
+  elements.closeViewer.addEventListener("click", closeDocumentViewer);
+
+  elements.viewerOverlay.addEventListener("click", (event) => {
+    if (event.target === elements.viewerOverlay) {
+      closeDocumentViewer();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (!state.viewerOpen) {
+      return;
+    }
+
+    if (event.key === "Escape") {
+      closeDocumentViewer();
+      elements.maximizePreview.focus();
+    }
+
+    if (event.key === "ArrowLeft") {
+      setCurrentPage(state.currentPage - 1);
+    }
+
+    if (event.key === "ArrowRight") {
+      setCurrentPage(state.currentPage + 1);
+    }
+  });
+
   elements.attachmentsBody.addEventListener("click", (event) => {
     const button = event.target.closest("[data-download-index]");
     if (!button) {
@@ -681,9 +826,10 @@ function attachEvents() {
       return;
     }
     window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => renderPreview(state.pdf), 150);
+    resizeTimer = window.setTimeout(renderCurrentPage, 150);
   });
   resizeObserver.observe(elements.previewFrame);
+  resizeObserver.observe(elements.viewerFrame);
 }
 
 setupLanguage();
