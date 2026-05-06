@@ -2,6 +2,119 @@ import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./vendor/pdfjs/pdf.worker.mjs";
 
+const STORAGE_LANG_KEY = "mbankPdfAttachmentExtractor.lang";
+
+const DOWNLOAD_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3v12"></path>
+    <path d="m7 10 5 5 5-5"></path>
+    <path d="M5 21h14"></path>
+  </svg>
+`;
+
+const I18N = {
+  en: {
+    metaTitle: "mBank PDF Attachment Extractor",
+    metaDescription: "Extract embedded attachments from encrypted mBank PDF documents in the browser.",
+    appSubtitle:
+      "All files are analyzed locally; nothing, including the password, is stored on a server.",
+    coffeeLink: "Buy me a coffee",
+    githubLink: "Open GitHub repository",
+    languageSelector: "Language selection",
+    openEyebrow: "Local browser session",
+    openTitle: "Open PDF",
+    dropTitle: "Drop PDF here",
+    dropSubtitle: "or choose a file",
+    selectPdf: "Select PDF",
+    fileLabel: "File",
+    sizeLabel: "Size",
+    noneSelected: "None selected",
+    passwordLabel: "PDF password",
+    passwordPlaceholder: "Paste password",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    extractButton: "Extract attachments",
+    unlockingButton: "Unlocking...",
+    previewEyebrow: "First page",
+    previewTitle: "Preview",
+    previewEmpty: "Preview appears after unlock.",
+    attachmentsEyebrow: "Embedded files",
+    attachmentsTitle: "Attachments",
+    downloadAll: "Download all",
+    tableFileName: "File name",
+    tableType: "Type",
+    tableSize: "Size",
+    tableAction: "Action",
+    download: "Download",
+    waitingForPdf: "Waiting for a PDF.",
+    choosePdfFile: "Choose a PDF file.",
+    pdfReady: "PDF ready. Paste the password to unlock it.",
+    choosePdfFirst: "Choose a PDF first.",
+    unlockingPdf: "Unlocking PDF...",
+    unlockedNoAttachments: "PDF unlocked. No embedded attachments found.",
+    unlockedAttachments: "PDF unlocked. {count} {attachmentWord} ready.",
+    attachmentSingular: "attachment",
+    attachmentPlural: "attachments",
+    passwordIncorrect: "Incorrect password.",
+    passwordRequired: "Password required.",
+    readError: "Could not read this PDF.",
+    noAttachmentsLoaded: "No attachments loaded yet.",
+    noEmbeddedAttachments: "No embedded attachments found.",
+    pageSingular: "page",
+    pagePlural: "pages",
+  },
+  pl: {
+    metaTitle: "mBank PDF Attachment Extractor",
+    metaDescription: "Wyodrębniaj załączniki z zaszyfrowanych PDF-ów mBanku lokalnie w przeglądarce.",
+    appSubtitle:
+      "Wszystkie pliki są analizowane lokalnie; nic, łącznie z hasłem, nie jest zapisywane na serwerze.",
+    coffeeLink: "Postaw mi kawę",
+    githubLink: "Otwórz repozytorium GitHub",
+    languageSelector: "Wybór języka",
+    openEyebrow: "Lokalna sesja przeglądarki",
+    openTitle: "Otwórz PDF",
+    dropTitle: "Upuść PDF tutaj",
+    dropSubtitle: "albo wybierz plik",
+    selectPdf: "Wybierz PDF",
+    fileLabel: "Plik",
+    sizeLabel: "Rozmiar",
+    noneSelected: "Nie wybrano pliku",
+    passwordLabel: "Hasło PDF",
+    passwordPlaceholder: "Wklej hasło",
+    showPassword: "Pokaż hasło",
+    hidePassword: "Ukryj hasło",
+    extractButton: "Pobierz załączniki",
+    unlockingButton: "Otwieranie...",
+    previewEyebrow: "Pierwsza strona",
+    previewTitle: "Podgląd",
+    previewEmpty: "Podgląd pojawi się po odblokowaniu.",
+    attachmentsEyebrow: "Pliki osadzone",
+    attachmentsTitle: "Załączniki",
+    downloadAll: "Pobierz wszystkie",
+    tableFileName: "Nazwa pliku",
+    tableType: "Typ",
+    tableSize: "Rozmiar",
+    tableAction: "Akcja",
+    download: "Pobierz",
+    waitingForPdf: "Czekam na PDF.",
+    choosePdfFile: "Wybierz plik PDF.",
+    pdfReady: "PDF gotowy. Wklej hasło, aby go odblokować.",
+    choosePdfFirst: "Najpierw wybierz PDF.",
+    unlockingPdf: "Otwieranie PDF-a...",
+    unlockedNoAttachments: "PDF odblokowany. Nie znaleziono osadzonych załączników.",
+    unlockedAttachments: "PDF odblokowany. Gotowe załączniki: {count}.",
+    attachmentSingular: "załącznik",
+    attachmentPlural: "załączniki",
+    passwordIncorrect: "Niepoprawne hasło.",
+    passwordRequired: "Hasło jest wymagane.",
+    readError: "Nie udało się odczytać tego PDF-a.",
+    noAttachmentsLoaded: "Nie wczytano jeszcze załączników.",
+    noEmbeddedAttachments: "Nie znaleziono osadzonych załączników.",
+    pageSingular: "strona",
+    pagePlural: "stron",
+  },
+};
+
 const elements = {
   dropZone: document.querySelector("#drop-zone"),
   fileInput: document.querySelector("#file-input"),
@@ -19,6 +132,11 @@ const elements = {
   previewEmpty: document.querySelector("#preview-empty"),
   attachmentsBody: document.querySelector("#attachments-body"),
   downloadAll: document.querySelector("#download-all"),
+  metaDescription: document.querySelector("#meta-description"),
+  langButtons: Array.from(document.querySelectorAll(".lang-btn")),
+  i18nNodes: Array.from(document.querySelectorAll("[data-i18n]")),
+  i18nPlaceholderNodes: Array.from(document.querySelectorAll("[data-i18n-placeholder]")),
+  i18nAriaNodes: Array.from(document.querySelectorAll("[data-i18n-aria-label]")),
 };
 
 const state = {
@@ -27,6 +145,12 @@ const state = {
   pdf: null,
   attachments: [],
   renderToken: 0,
+  busy: false,
+  lang: "en",
+  statusKey: "waitingForPdf",
+  statusVariant: "neutral",
+  statusVars: {},
+  emptyAttachmentsKey: "noAttachmentsLoaded",
 };
 
 const mimeByExtension = new Map([
@@ -44,6 +168,160 @@ const mimeByExtension = new Map([
   ["xml", "application/xml"],
   ["zip", "application/zip"],
 ]);
+
+function t(key, vars = {}) {
+  const template = I18N[state.lang]?.[key] ?? I18N.en[key] ?? key;
+  return Object.entries(vars).reduce(
+    (value, [name, replacement]) => value.replaceAll(`{${name}}`, String(replacement)),
+    template,
+  );
+}
+
+function normalizeLang(value) {
+  if (!value) {
+    return "en";
+  }
+
+  return value.toLowerCase().startsWith("pl") ? "pl" : "en";
+}
+
+function detectBrowserLang() {
+  if (Array.isArray(navigator.languages) && navigator.languages.length > 0) {
+    return navigator.languages[0];
+  }
+
+  return navigator.language || "en";
+}
+
+function readStoredLang() {
+  try {
+    return localStorage.getItem(STORAGE_LANG_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function persistLang(lang) {
+  try {
+    localStorage.setItem(STORAGE_LANG_KEY, lang);
+  } catch {
+    // Keep language switching working even when storage is unavailable.
+  }
+}
+
+function setupLanguage() {
+  const storedLang = readStoredLang();
+  setLanguage(storedLang || detectBrowserLang(), false);
+
+  elements.langButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setLanguage(button.dataset.lang, true);
+    });
+  });
+}
+
+function setLanguage(lang, persist) {
+  state.lang = normalizeLang(lang);
+
+  if (persist) {
+    persistLang(state.lang);
+  }
+
+  document.documentElement.lang = state.lang;
+  document.title = t("metaTitle");
+  if (elements.metaDescription) {
+    elements.metaDescription.content = t("metaDescription");
+  }
+
+  for (const node of elements.i18nNodes) {
+    node.textContent = t(node.dataset.i18n);
+  }
+
+  for (const node of elements.i18nPlaceholderNodes) {
+    node.setAttribute("placeholder", t(node.dataset.i18nPlaceholder));
+  }
+
+  for (const node of elements.i18nAriaNodes) {
+    node.setAttribute("aria-label", t(node.dataset.i18nAriaLabel));
+  }
+
+  updateLanguageButtons();
+  updateTogglePasswordLabel();
+  renderStatus();
+  renderPageCount();
+  renderExtractButton();
+
+  elements.fileName.textContent = state.file ? state.file.name : t("noneSelected");
+
+  if (state.attachments.length > 0) {
+    renderAttachments();
+  } else {
+    renderEmptyAttachments(state.emptyAttachmentsKey);
+  }
+}
+
+function updateLanguageButtons() {
+  elements.langButtons.forEach((button) => {
+    const isActive = button.dataset.lang === state.lang;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function renderStatus() {
+  const vars = { ...state.statusVars };
+  if (state.statusKey === "unlockedAttachments") {
+    vars.attachmentWord =
+      vars.count === 1 ? t("attachmentSingular") : t("attachmentPlural");
+  }
+  elements.status.textContent = t(state.statusKey, vars);
+  elements.status.classList.toggle("is-error", state.statusVariant === "error");
+  elements.status.classList.toggle("is-success", state.statusVariant === "success");
+}
+
+function setStatusByKey(key, variant = "neutral", vars = {}) {
+  state.statusKey = key;
+  state.statusVariant = variant;
+  state.statusVars = vars;
+  renderStatus();
+}
+
+function pageWord(count) {
+  if (state.lang === "pl") {
+    const lastDigit = count % 10;
+    const lastTwoDigits = count % 100;
+    if (count === 1) {
+      return "strona";
+    }
+    if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
+      return "strony";
+    }
+    return "stron";
+  }
+
+  return count === 1 ? t("pageSingular") : t("pagePlural");
+}
+
+function renderPageCount() {
+  if (!state.pdf) {
+    elements.pageCount.textContent = "-";
+    return;
+  }
+
+  elements.pageCount.textContent = `${state.pdf.numPages} ${pageWord(state.pdf.numPages)}`;
+}
+
+function renderExtractButton() {
+  elements.extractButton.innerHTML = `
+    ${DOWNLOAD_ICON}
+    <span>${t(state.busy ? "unlockingButton" : "extractButton")}</span>
+  `;
+}
+
+function updateTogglePasswordLabel() {
+  const key = elements.password.type === "password" ? "showPassword" : "hidePassword";
+  elements.togglePassword.setAttribute("aria-label", t(key));
+}
 
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes <= 0) {
@@ -74,31 +352,15 @@ function typeLabel(filename, contentType) {
   return mime;
 }
 
-function setStatus(message, variant = "neutral") {
-  elements.status.textContent = message;
-  elements.status.classList.toggle("is-error", variant === "error");
-  elements.status.classList.toggle("is-success", variant === "success");
-}
-
 function setBusy(isBusy) {
+  state.busy = isBusy;
   elements.extractButton.disabled = isBusy || !state.file;
   elements.fileInput.disabled = isBusy;
   elements.selectFile.disabled = isBusy;
   elements.password.disabled = isBusy || !state.file;
   elements.togglePassword.disabled = isBusy || !state.file;
   elements.downloadAll.disabled = isBusy || state.attachments.length === 0;
-  elements.extractButton.textContent = isBusy ? "Unlocking..." : "";
-
-  if (!isBusy) {
-    elements.extractButton.innerHTML = `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 3v12"></path>
-        <path d="m7 10 5 5 5-5"></path>
-        <path d="M5 21h14"></path>
-      </svg>
-      Extract attachments
-    `;
-  }
+  renderExtractButton();
 }
 
 function resetPreview() {
@@ -109,10 +371,11 @@ function resetPreview() {
   elements.pageCount.textContent = "-";
 }
 
-function renderEmptyAttachments(message = "No attachments loaded yet.") {
+function renderEmptyAttachments(key = "noAttachmentsLoaded") {
+  state.emptyAttachmentsKey = key;
   elements.attachmentsBody.innerHTML = `
     <tr>
-      <td colspan="4" class="empty-row">${message}</td>
+      <td colspan="4" class="empty-row">${t(key)}</td>
     </tr>
   `;
   elements.downloadAll.disabled = true;
@@ -145,7 +408,7 @@ async function handleFile(file) {
   }
 
   if (!validatePdfFile(file)) {
-    setStatus("Choose a PDF file.", "error");
+    setStatusByKey("choosePdfFile", "error");
     return;
   }
 
@@ -160,7 +423,7 @@ async function handleFile(file) {
   elements.extractButton.disabled = false;
   elements.password.focus();
   elements.password.select();
-  setStatus("PDF ready. Paste the password to unlock it.");
+  setStatusByKey("pdfReady");
 }
 
 function handleDrop(event) {
@@ -216,7 +479,7 @@ function attachmentIcon() {
 
 function renderAttachments() {
   if (state.attachments.length === 0) {
-    renderEmptyAttachments("No embedded attachments found.");
+    renderEmptyAttachments("noEmbeddedAttachments");
     return;
   }
 
@@ -228,7 +491,7 @@ function renderAttachments() {
 
       return `
         <tr>
-          <td data-label="File name">
+          <td data-label="${escapeHtml(t("tableFileName"))}">
             <div class="file-cell">
               <span class="file-badge">${attachmentIcon()}</span>
               <span class="file-label">
@@ -237,16 +500,12 @@ function renderAttachments() {
               </span>
             </div>
           </td>
-          <td data-label="Type">${escapeHtml(typeLabel(attachment.filename, attachment.contentType))}</td>
-          <td data-label="Size">${formatBytes(attachment.size)}</td>
-          <td data-label="Action">
+          <td data-label="${escapeHtml(t("tableType"))}">${escapeHtml(typeLabel(attachment.filename, attachment.contentType))}</td>
+          <td data-label="${escapeHtml(t("tableSize"))}">${formatBytes(attachment.size)}</td>
+          <td data-label="${escapeHtml(t("tableAction"))}">
             <button class="button button-light download-button" type="button" data-download-index="${index}">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 3v12"></path>
-                <path d="m7 10 5 5 5-5"></path>
-                <path d="M5 21h14"></path>
-              </svg>
-              Download
+              ${DOWNLOAD_ICON}
+              <span>${escapeHtml(t("download"))}</span>
             </button>
           </td>
         </tr>
@@ -301,18 +560,18 @@ async function renderPreview(pdf) {
 
 async function extractAttachments() {
   if (!state.file || !state.fileBuffer) {
-    setStatus("Choose a PDF first.", "error");
+    setStatusByKey("choosePdfFirst", "error");
     return;
   }
 
   setBusy(true);
-  setStatus("Unlocking PDF...");
+  setStatusByKey("unlockingPdf");
 
   try {
     await destroyCurrentPdf();
     const pdf = await loadPdfDocument();
     state.pdf = pdf;
-    elements.pageCount.textContent = `${pdf.numPages} ${pdf.numPages === 1 ? "page" : "pages"}`;
+    renderPageCount();
 
     const attachmentsMap = await pdf.getAttachments();
     state.attachments = normalizeAttachments(attachmentsMap);
@@ -320,11 +579,13 @@ async function extractAttachments() {
     await renderPreview(pdf);
 
     const count = state.attachments.length;
-    setStatus(
-      count === 0
-        ? "PDF unlocked. No embedded attachments found."
-        : `PDF unlocked. ${count} ${count === 1 ? "attachment" : "attachments"} ready.`,
+    setStatusByKey(
+      count === 0 ? "unlockedNoAttachments" : "unlockedAttachments",
       count === 0 ? "neutral" : "success",
+      {
+        count,
+        attachmentWord: count === 1 ? t("attachmentSingular") : t("attachmentPlural"),
+      },
     );
   } catch (error) {
     state.attachments = [];
@@ -333,14 +594,14 @@ async function extractAttachments() {
 
     if (error?.name === "PasswordException") {
       const isIncorrect = error.code === pdfjsLib.PasswordResponses.INCORRECT_PASSWORD;
-      setStatus(isIncorrect ? "Incorrect password." : "Password required.", "error");
+      setStatusByKey(isIncorrect ? "passwordIncorrect" : "passwordRequired", "error");
       elements.password.focus();
       elements.password.select();
       return;
     }
 
     console.error(error);
-    setStatus("Could not read this PDF.", "error");
+    setStatusByKey("readError", "error");
   } finally {
     setBusy(false);
   }
@@ -399,10 +660,7 @@ function attachEvents() {
   elements.togglePassword.addEventListener("click", () => {
     const nextType = elements.password.type === "password" ? "text" : "password";
     elements.password.type = nextType;
-    elements.togglePassword.setAttribute(
-      "aria-label",
-      nextType === "password" ? "Show password" : "Hide password",
-    );
+    updateTogglePasswordLabel();
   });
 
   elements.attachmentsBody.addEventListener("click", (event) => {
@@ -428,4 +686,5 @@ function attachEvents() {
   resizeObserver.observe(elements.previewFrame);
 }
 
+setupLanguage();
 attachEvents();

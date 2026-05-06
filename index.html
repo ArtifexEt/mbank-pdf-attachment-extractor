@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
+      id="meta-description"
       name="description"
       content="Extract embedded attachments from encrypted mBank PDF documents in the browser."
     >
@@ -20,19 +21,45 @@
       <header class="topbar">
         <a class="brand" href="./" aria-label="mBank PDF Attachment Extractor home">
           <span class="brand-mark" aria-hidden="true">m</span>
-          <span>mBank PDF Attachment Extractor</span>
+          <span class="brand-copy">
+            <span>mBank PDF Attachment Extractor</span>
+            <span class="brand-subtitle" data-i18n="appSubtitle">
+              All files are analyzed locally; nothing, including the password, is stored on a server.
+            </span>
+          </span>
         </a>
 
         <nav class="topbar-actions" aria-label="Project links">
-          <a href="https://github.com/ArtifexEt/mbank-pdf-attachment-extractor">GitHub</a>
+          <a
+            class="topbar-link"
+            href="https://github.com/ArtifexEt/mbank-pdf-attachment-extractor"
+            data-i18n-aria-label="githubLink"
+            aria-label="Open GitHub repository"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 19c-4.2 1.2-4.2-2-6-2.4"></path>
+              <path d="M15 22v-3.4a3 3 0 0 0-.8-2.3c2.7-.3 5.6-1.3 5.6-6a4.7 4.7 0 0 0-1.3-3.3 4.4 4.4 0 0 0-.1-3.2s-1-.3-3.4 1.2a11.7 11.7 0 0 0-6.1 0C6.5 3.1 5.5 3.4 5.5 3.4a4.4 4.4 0 0 0-.1 3.2 4.7 4.7 0 0 0-1.3 3.3c0 4.7 2.9 5.7 5.6 6a3 3 0 0 0-.8 2.3V22"></path>
+            </svg>
+            <span>GitHub</span>
+          </a>
           <a
             class="button button-coffee"
             href="https://buymeacoffee.com/szymonrybka"
             target="_blank"
             rel="noopener noreferrer"
+            data-i18n="coffeeLink"
           >
             Buy me a coffee
           </a>
+          <div
+            class="lang-switch"
+            role="group"
+            aria-label="Language selection"
+            data-i18n-aria-label="languageSelector"
+          >
+            <button type="button" class="lang-btn" data-lang="pl" aria-label="Polish" title="Polish">🇵🇱</button>
+            <button type="button" class="lang-btn" data-lang="en" aria-label="English" title="English">🇬🇧</button>
+          </div>
         </nav>
       </header>
 
@@ -40,10 +67,9 @@
         <section class="panel workflow-panel" aria-labelledby="open-pdf-title">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Local browser session</p>
-              <h1 id="open-pdf-title">Open PDF</h1>
+              <p class="eyebrow" data-i18n="openEyebrow">Local browser session</p>
+              <h1 id="open-pdf-title" data-i18n="openTitle">Open PDF</h1>
             </div>
-            <span class="privacy-chip">No upload</span>
           </div>
 
           <div
@@ -57,24 +83,24 @@
               <path d="M9 15h6"></path>
               <path d="M12 12v6"></path>
             </svg>
-            <strong>Drop PDF here</strong>
-            <span>or choose a file</span>
+            <strong data-i18n="dropTitle">Drop PDF here</strong>
+            <span data-i18n="dropSubtitle">or choose a file</span>
             <button id="select-file" class="button button-light" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 5v14"></path>
                 <path d="M5 12h14"></path>
               </svg>
-              Select PDF
+              <span data-i18n="selectPdf">Select PDF</span>
             </button>
           </div>
 
           <dl class="file-summary" aria-label="Selected PDF details">
             <div>
-              <dt>File</dt>
-              <dd id="file-name">None selected</dd>
+              <dt data-i18n="fileLabel">File</dt>
+              <dd id="file-name" data-i18n="noneSelected">None selected</dd>
             </div>
             <div>
-              <dt>Size</dt>
+              <dt data-i18n="sizeLabel">Size</dt>
               <dd id="file-size">-</dd>
             </div>
           </dl>
@@ -86,16 +112,24 @@
               value="local-pdf"
               hidden
             >
-            <label for="password-input">PDF password</label>
+            <label for="password-input" data-i18n="passwordLabel">PDF password</label>
             <div class="password-row">
               <input
                 id="password-input"
                 type="password"
                 autocomplete="current-password"
                 placeholder="Paste password"
+                data-i18n-placeholder="passwordPlaceholder"
                 disabled
               >
-              <button id="toggle-password" class="icon-button" type="button" disabled aria-label="Show password">
+              <button
+                id="toggle-password"
+                class="icon-button"
+                type="button"
+                disabled
+                aria-label="Show password"
+                data-i18n-aria-label="showPassword"
+              >
                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path>
                   <circle cx="12" cy="12" r="2.5"></circle>
@@ -109,7 +143,7 @@
                 <path d="m7 10 5 5 5-5"></path>
                 <path d="M5 21h14"></path>
               </svg>
-              Extract attachments
+              <span data-i18n="extractButton">Extract attachments</span>
             </button>
           </form>
 
@@ -119,8 +153,8 @@
         <section class="panel preview-panel" aria-labelledby="preview-title">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">First page</p>
-              <h2 id="preview-title">Preview</h2>
+              <p class="eyebrow" data-i18n="previewEyebrow">First page</p>
+              <h2 id="preview-title" data-i18n="previewTitle">Preview</h2>
             </div>
             <span id="page-count" class="meta-pill">-</span>
           </div>
@@ -134,7 +168,7 @@
                 <path d="M9 13h6"></path>
                 <path d="M9 17h4"></path>
               </svg>
-              <span>Preview appears after unlock.</span>
+              <span data-i18n="previewEmpty">Preview appears after unlock.</span>
             </div>
           </div>
         </section>
@@ -142,8 +176,8 @@
         <section class="panel attachments-panel" aria-labelledby="attachments-title">
           <div class="panel-heading table-heading">
             <div>
-              <p class="eyebrow">Embedded files</p>
-              <h2 id="attachments-title">Attachments</h2>
+              <p class="eyebrow" data-i18n="attachmentsEyebrow">Embedded files</p>
+              <h2 id="attachments-title" data-i18n="attachmentsTitle">Attachments</h2>
             </div>
             <button id="download-all" class="button button-light" type="button" disabled>
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -151,7 +185,7 @@
                 <path d="m7 10 5 5 5-5"></path>
                 <path d="M5 21h14"></path>
               </svg>
-              Download all
+              <span data-i18n="downloadAll">Download all</span>
             </button>
           </div>
 
@@ -159,10 +193,10 @@
             <table>
               <thead>
                 <tr>
-                  <th scope="col">File name</th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Size</th>
-                  <th scope="col">Action</th>
+                  <th scope="col" data-i18n="tableFileName">File name</th>
+                  <th scope="col" data-i18n="tableType">Type</th>
+                  <th scope="col" data-i18n="tableSize">Size</th>
+                  <th scope="col" data-i18n="tableAction">Action</th>
                 </tr>
               </thead>
               <tbody id="attachments-body">

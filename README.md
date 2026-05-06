@@ -15,6 +15,7 @@ Support: [Buy me a coffee](https://buymeacoffee.com/szymonrybka)
 - Preview the first page after the PDF is unlocked.
 - List embedded attachments in a table.
 - Download each attachment as its original file.
+- Switch between English and Polish; the app detects the browser language and saves the chosen language locally.
 
 ## Privacy
 
