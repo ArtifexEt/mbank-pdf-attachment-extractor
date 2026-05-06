@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Extract embedded attachments from encrypted mBank PDF documents in the browser."
+    >
+    <title>mBank PDF Attachment Extractor</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23d71920'/%3E%3Crect x='11' width='10' height='32' fill='%23f2b705'/%3E%3Crect x='21' width='11' height='32' fill='%23222222'/%3E%3Ctext x='7' y='23' font-family='Arial,sans-serif' font-size='21' font-weight='700' fill='white'%3Em%3C/text%3E%3C/svg%3E"
+    >
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="mBank PDF Attachment Extractor home">
+          <span class="brand-mark" aria-hidden="true">m</span>
+          <span>mBank PDF Attachment Extractor</span>
+        </a>
+
+        <nav class="topbar-actions" aria-label="Project links">
+          <a href="https://github.com/ArtifexEt/mbank-pdf-attachment-extractor">GitHub</a>
+          <a
+            class="button button-coffee"
+            href="https://buymeacoffee.com/szymonrybka"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Buy me a coffee
+          </a>
+        </nav>
+      </header>
+
+      <main class="main-layout">
+        <section class="panel workflow-panel" aria-labelledby="open-pdf-title">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Local browser session</p>
+              <h1 id="open-pdf-title">Open PDF</h1>
+            </div>
+            <span class="privacy-chip">No upload</span>
+          </div>
+
+          <div
+            id="drop-zone"
+            class="drop-zone"
+          >
+            <input id="file-input" type="file" accept="application/pdf,.pdf" hidden>
+            <svg class="drop-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"></path>
+              <path d="M14 2v5h5"></path>
+              <path d="M9 15h6"></path>
+              <path d="M12 12v6"></path>
+            </svg>
+            <strong>Drop PDF here</strong>
+            <span>or choose a file</span>
+            <button id="select-file" class="button button-light" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14"></path>
+                <path d="M5 12h14"></path>
+              </svg>
+              Select PDF
+            </button>
+          </div>
+
+          <dl class="file-summary" aria-label="Selected PDF details">
+            <div>
+              <dt>File</dt>
+              <dd id="file-name">None selected</dd>
+            </div>
+            <div>
+              <dt>Size</dt>
+              <dd id="file-size">-</dd>
+            </div>
+          </dl>
+
+          <form id="pdf-form" class="password-form">
+            <input
+              type="text"
+              autocomplete="username"
+              value="local-pdf"
+              hidden
+            >
+            <label for="password-input">PDF password</label>
+            <div class="password-row">
+              <input
+                id="password-input"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Paste password"
+                disabled
+              >
+              <button id="toggle-password" class="icon-button" type="button" disabled aria-label="Show password">
+                <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path>
+                  <circle cx="12" cy="12" r="2.5"></circle>
+                </svg>
+              </button>
+            </div>
+
+            <button id="extract-button" class="button button-primary" type="submit" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v12"></path>
+                <path d="m7 10 5 5 5-5"></path>
+                <path d="M5 21h14"></path>
+              </svg>
+              Extract attachments
+            </button>
+          </form>
+
+          <p id="status-message" class="status-message" role="status">Waiting for a PDF.</p>
+        </section>
+
+        <section class="panel preview-panel" aria-labelledby="preview-title">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">First page</p>
+              <h2 id="preview-title">Preview</h2>
+            </div>
+            <span id="page-count" class="meta-pill">-</span>
+          </div>
+
+          <div id="preview-frame" class="preview-frame">
+            <canvas id="pdf-preview" aria-label="PDF first page preview"></canvas>
+            <div id="preview-empty" class="empty-preview">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"></path>
+                <path d="M14 2v5h5"></path>
+                <path d="M9 13h6"></path>
+                <path d="M9 17h4"></path>
+              </svg>
+              <span>Preview appears after unlock.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel attachments-panel" aria-labelledby="attachments-title">
+          <div class="panel-heading table-heading">
+            <div>
+              <p class="eyebrow">Embedded files</p>
+              <h2 id="attachments-title">Attachments</h2>
+            </div>
+            <button id="download-all" class="button button-light" type="button" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v12"></path>
+                <path d="m7 10 5 5 5-5"></path>
+                <path d="M5 21h14"></path>
+              </svg>
+              Download all
+            </button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">File name</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Size</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody id="attachments-body">
+                <tr>
+                  <td colspan="4" class="empty-row">No attachments loaded yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <noscript>
+      <div class="noscript">JavaScript is required to read encrypted PDFs in the browser.</div>
+    </noscript>
+  </body>
+</html>
