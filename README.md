@@ -22,9 +22,7 @@ The app has no backend. PDF files, passwords, previews, and extracted attachment
 
 ## Deploying to GitHub Pages
 
-The repository includes a GitHub Actions workflow that uploads the static files from `main` to GitHub Pages without a build step.
-
-If Pages is not already enabled, open repository settings and set **Pages** to deploy with **GitHub Actions**.
+The live site is published from the `gh-pages` branch. The project is static, so deployment is just the HTML, CSS, JavaScript, and vendored PDF.js files with no build step.
 
 ## Local Development
 
